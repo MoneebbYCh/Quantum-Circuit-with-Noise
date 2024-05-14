@@ -1,0 +1,43 @@
+from qiskit import QuantumCircuit, transpile
+from qiskit_aer import Aer
+from qiskit.quantum_info import Statevector
+from qiskit_experiments.framework import ParallelExperiment
+from qiskit_experiments.library import StateTomography
+
+# Create a simple quantum circuit
+qc = QuantumCircuit(2)
+qc.h(0)
+qc.cx(0, 1)
+
+# Use Aer's statevector simulator
+simulator = Aer.get_backend('statevector_simulator')
+
+# Transpile the circuit for the simulator
+transpiled_circuit = transpile(qc, simulator)
+
+# Execute the transpiled circuit
+job = simulator.run(transpiled_circuit)
+state_vector = job.result().get_statevector()
+
+# Perform state tomography
+tomo = StateTomography(qc)
+tomo_exp = ParallelExperiment([tomo])
+backend = Aer.get_backend('qasm_simulator')
+
+# Transpile the experiment circuits for the backend
+tomo_circuits = transpile(tomo_exp.circuits(), backend)
+
+# Run the tomography experiment
+tomo_result = backend.run(tomo_circuits)
+
+# Retrieve the analyzed results directly from the result object
+tomo_analysis_results = tomo_exp.analysis(tomo_result.result(), return_figures=False)
+
+# Extract the fitted state
+fitted_state = tomo_analysis_results.analysis_results("state").value
+
+# Print the results
+print("Original State Vector:")
+print(state_vector)
+print("Reconstructed Density Matrix from State Tomography:")
+print(fitted_state)
